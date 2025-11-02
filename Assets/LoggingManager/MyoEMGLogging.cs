@@ -6,13 +6,11 @@ using UnityEngine;
 public class MyoEMGLogging : MonoBehaviour
 {
     [SerializeField] private LoggingManager loggingManager;
+    [SerializeField] private EMGPointer rightHandEMGPointer;
     [SerializeField] public ThalmicMyo thalmicMyo;
 
     List<string> EMGCol;
     private bool isLoggingStarted = false;
-
-    public static string CurrentGestures = "NULL";
-    public static string Threshold = "below";
 
     void Start()
     {
@@ -21,7 +19,8 @@ public class MyoEMGLogging : MonoBehaviour
         List<string> logCols = new List<string>(EMGCol)
         {
             "CurrentGestures",
-            "Threshold"
+            "Threshold",
+            "PredictionConfidence"
         };
 
         // Initialize EMG log collection with specified columns.
@@ -62,8 +61,9 @@ public class MyoEMGLogging : MonoBehaviour
             .ToDictionary(x => x.col, x => (object)x.value);
 
         // Add CurrentGestures and Threshold columns with their current values
-        emgData["CurrentGestures"] = CurrentGestures;
-        emgData["Threshold"] = Threshold;
+        emgData["CurrentGestures"] = rightHandEMGPointer.GetCurrentGesture().ToString();
+        emgData["Threshold"] = rightHandEMGPointer.getThresholdState();
+        emgData["PredictionConfidence"] = rightHandEMGPointer.GetCurrentGestureConfidence().ToString();
 
         // Time.frameCount (used in LogStore) can only be accessed from the main
         // thread so we use MainThreadDispatcher to enqueue the logging action.
