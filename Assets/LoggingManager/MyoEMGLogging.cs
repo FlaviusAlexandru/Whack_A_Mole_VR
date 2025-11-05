@@ -12,6 +12,31 @@ public class MyoEMGLogging : MonoBehaviour
     List<string> EMGCol;
     private bool isLoggingStarted = false;
 
+    void Awake()
+    {
+        // Auto-subscribe to GameDirector state updates so logging starts/stops with the game
+        GameDirector director = FindObjectOfType<GameDirector>();
+        if (director != null)
+        {
+            director.stateUpdate.AddListener(OnGameDirectorStateUpdate);
+        }
+        else
+        {
+            Debug.LogWarning("MyoEMGLogging: GameDirector not found. EMG logging won't start automatically.");
+        }
+    }
+
+    void OnDisable()
+    {
+        // Unsubscribe to avoid leaks and make sure we stop logging
+        GameDirector director = FindObjectOfType<GameDirector>();
+        if (director != null)
+        {
+            director.stateUpdate.RemoveListener(OnGameDirectorStateUpdate);
+        }
+        FinishLogging();
+    }
+
     void Start()
     {
         // Define EMG column headers and additional log columns.
@@ -24,7 +49,24 @@ public class MyoEMGLogging : MonoBehaviour
         };
 
         // Initialize EMG log collection with specified columns.
-        loggingManager.CreateLog("EMG", logCols);
+        if (loggingManager == null)
+        {
+            loggingManager = FindObjectOfType<LoggingManager>();
+            if (loggingManager == null)
+            {
+                Debug.LogError("MyoEMGLogging: LoggingManager not set and not found in scene. CSV output will not work.");
+            }
+        }
+        else
+        {
+            loggingManager.CreateLog("EMG", logCols);
+        }
+
+        // If LoggingManager was found via FindObjectOfType, still create the log
+        if (loggingManager != null)
+        {
+            loggingManager.CreateLog("EMG", logCols);
+        }
     }
 
     public void OnGameDirectorStateUpdate(GameDirector.GameState newState)
@@ -47,6 +89,12 @@ public class MyoEMGLogging : MonoBehaviour
     {
         if (isLoggingStarted) return;
 
+        if (thalmicMyo == null || thalmicMyo._myo == null)
+        {
+            Debug.LogWarning("MyoEMGLogging: ThalmicMyo reference is missing. Cannot subscribe to EMG data.");
+            return;
+        }
+
         // Add event handlers to the Myo device to receive EMG data.
         thalmicMyo._myo.EmgData += onReceiveData;
 
@@ -55,15 +103,28 @@ public class MyoEMGLogging : MonoBehaviour
 
     private void onReceiveData(object sender, EmgDataEventArgs data)
     {
+        if (loggingManager == null)
+        {
+            // If not set for any reason, try to recover once
+            loggingManager = FindObjectOfType<LoggingManager>();
+            if (loggingManager == null)
+            {
+                return; // Can't log without a manager
+            }
+        }
+
         // Format the EMG data into a dictionary {"EMG_i", data.Emg[i]}
         Dictionary<string, object> emgData = EMGCol
             .Select((col, i) => new { col, value = data.Emg[i] })
             .ToDictionary(x => x.col, x => (object)x.value);
 
-        // Add CurrentGestures and Threshold columns with their current values
-        emgData["CurrentGestures"] = rightHandEMGPointer.GetCurrentGesture().ToString();
-        emgData["Threshold"] = rightHandEMGPointer.getThresholdState();
-        emgData["PredictionConfidence"] = rightHandEMGPointer.GetCurrentGestureConfidence().ToString();
+        // Add CurrentGestures and Threshold columns with their current values (guard against null pointer)
+        string gesture = rightHandEMGPointer != null ? rightHandEMGPointer.GetCurrentGesture().ToString() : "Unknown";
+        string threshold = rightHandEMGPointer != null ? rightHandEMGPointer.getThresholdState() : "Unknown";
+        string conf = rightHandEMGPointer != null ? rightHandEMGPointer.GetCurrentGestureConfidence() : "Uncertain";
+        emgData["CurrentGestures"] = gesture;
+        emgData["Threshold"] = threshold;
+        emgData["PredictionConfidence"] = conf;
 
         // Time.frameCount (used in LogStore) can only be accessed from the main
         // thread so we use MainThreadDispatcher to enqueue the logging action.
@@ -75,7 +136,10 @@ public class MyoEMGLogging : MonoBehaviour
 
     void FinishLogging()
     {
-        thalmicMyo._myo.EmgData -= onReceiveData;
+        if (thalmicMyo != null && thalmicMyo._myo != null)
+        {
+            thalmicMyo._myo.EmgData -= onReceiveData;
+        }
         isLoggingStarted = false;
     }
 }

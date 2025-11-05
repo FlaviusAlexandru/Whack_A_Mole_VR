@@ -392,6 +392,16 @@ public class GameDirector : MonoBehaviour
         StopAllCoroutines();
         wallManager.Disable();
         modifiersManager.SetDefaultModifiers();
+
+        // Persist logs at the end of a session
+        if (loggingManager != null)
+        {
+            loggingManager.SaveAllLogs(true, TargetType.CSV);
+        }
+        else
+        {
+            Debug.LogWarning("GameDirector: LoggingManager missing, cannot save CSV logs on finish.");
+        }
     }
 
     private void SpawnMole(float lifeTime, bool fakeCoeff)
@@ -540,7 +550,11 @@ public class GameDirector : MonoBehaviour
 
     void OnApplicationQuit()
     {
-        gazeRecorder.StopRecording();
+        if (gazeRecorder != null) gazeRecorder.StopRecording();
+        if (loggingManager != null)
+        {
+            loggingManager.SaveAllLogs(true, TargetType.CSV);
+        }
     }
 
 }
