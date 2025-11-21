@@ -156,7 +156,7 @@ MonoBehaviour:
   animatorLayerIndex: 0
   enableSound: {fileID: 0}
   popSound: {fileID: 0}
-  hoverInfoContainer: {fileID: 0}
+  hoverInfoContainer: {fileID: 2472597733794959735}
   hoverInfos:
   - key: PalmarGrasp
     value: {fileID: 7465889364011189065}
@@ -164,6 +164,8 @@ MonoBehaviour:
     value: {fileID: 8488337780525873050, guid: 4c626d174803f0d499d99eb3dba038cc, type: 3}
   - key: WristExtension
     value: {fileID: 8273344792692264787}
+  - key: LateralGrasp
+    value: {fileID: 8309421513415746510}
   autoSnapOnPop: 1
 --- !u!82 &7182310836803905482
 AudioSource:
@@ -334,7 +336,7 @@ MonoBehaviour:
   localPositionOffset: {x: -0.00011, y: -0.00064, z: -0.00071}
   localRotationOffsetEuler: {x: 265, y: 90, z: 20}
   keepConstraintActive: 1
-  blendInDuration: 0
+  blendInDuration: 0.15
   blendCurve:
     serializedVersion: 2
     m_Curve:
@@ -1154,6 +1156,11 @@ PrefabInstance:
       propertyPath: m_SortingOrder
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 3855679227459458632, guid: b6546a65965f72748aa3c8daf096a351,
+        type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 7ef892270510b78499cfacbfec558272, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1162,6 +1169,12 @@ PrefabInstance:
 --- !u!224 &6738583367869946609 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 150506661526325152, guid: b6546a65965f72748aa3c8daf096a351,
+    type: 3}
+  m_PrefabInstance: {fileID: 6886836006933568849}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8309421513415746510 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3225151327248547487, guid: b6546a65965f72748aa3c8daf096a351,
     type: 3}
   m_PrefabInstance: {fileID: 6886836006933568849}
   m_PrefabAsset: {fileID: 0}
