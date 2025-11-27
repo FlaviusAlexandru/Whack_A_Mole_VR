@@ -258,3 +258,12 @@ public enum EMGPointerBehavior
     LivePrediction,
     Training
 }
+
+/*
+AIServerInterface
+Handles communication with external AI server for EMG gesture classification.
+
+Note: For future consideration - LibEMG is an alternative open-source Python toolbox 
+for myoelectric control that could be evaluated:
+https://delsyseurope.com/libemg-an-open-source-python-toolbox-for-myoelectric-control/
+*/
