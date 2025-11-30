@@ -94,6 +94,21 @@ public class EMGPointer : Pointer
             virtualHand.GetComponent<VirtualHandTrigger>().TriggerOnMoleEntered += OnHoverEnter;
             virtualHand.GetComponent<VirtualHandTrigger>().TriggerOnMoleExited += OnHoverExit;
             virtualHand.GetComponent<VirtualHandTrigger>().TriggerOnMoleStay += OnHoverStay;
+
+            // Register the virtual hand's LogTracker with the TrackerHub
+            LogTracker virtualHandTracker = virtualHand.GetComponent<LogTracker>();
+            if (virtualHandTracker != null)
+            {
+                TrackerHub trackerHub = FindObjectOfType<TrackerHub>();
+                if (trackerHub != null)
+                {
+                    trackerHub.RegisterTracker(virtualHandTracker);
+                }
+                else
+                {
+                    Debug.LogWarning("EMGPointer: TrackerHub not found. Virtual hand position will not be logged.");
+                }
+            }
         }
         else Debug.LogError("No virtual hand prefab assigned to the EMG Pointer.");
 
@@ -107,8 +122,19 @@ public class EMGPointer : Pointer
     {
         if (!active) return;
 
+        // Unregister the virtual hand's LogTracker before destroying it
         if (virtualHand != null)
         {
+            LogTracker virtualHandTracker = virtualHand.GetComponent<LogTracker>();
+            if (virtualHandTracker != null)
+            {
+                TrackerHub trackerHub = FindObjectOfType<TrackerHub>();
+                if (trackerHub != null)
+                {
+                    trackerHub.UnregisterTracker(virtualHandTracker);
+                }
+            }
+
             Destroy(virtualHand);
             virtualHand = null;
         }

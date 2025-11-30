@@ -450,6 +450,7 @@ GameObject:
   - component: {fileID: 1038958721187610635}
   - component: {fileID: 551098939140794093}
   - component: {fileID: 8843044038936257052}
+  - component: {fileID: 448580597571299936}
   m_Layer: 0
   m_Name: VirtualHandRight
   m_TagString: Untagged
@@ -555,6 +556,23 @@ MonoBehaviour:
   hapticTactorNumbers: 0100000002000000030000000400000005000000
   logGestureHaptics: 1
   noPulseOnGestures: 0000000006000000
+--- !u!114 &448580597571299936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7353169756236129074}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 079b37b96b36c4440b82052e76cfcca2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  identifier: VirtualHandRight
+  trackRot: 1
+  trackPos: 1
+  trackTrigger: 0
+  controller: 0
 --- !u!1001 &8086483300399572474
 PrefabInstance:
   m_ObjectHideFlags: 0
