@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class AIServerInterface
 {
     private ThalmicMyo thalmicMyo;
-    private int memorySize = 6;
+    private int memorySize = 15;  // Increased from 6 to 15 for better smoothing
     private string currentGesture = "Unknown";
     private string currentGestureProb = "Uncertain";
     private Queue<PredictionResponse> previousGesture = new Queue<PredictionResponse>();
@@ -18,6 +18,14 @@ public class AIServerInterface
     private List<int[]> emgBatch = new List<int[]>();
     private bool isProcessingRequest = false;
     private bool isBuffering = true;
+
+    // Gesture change hysteresis - require N consecutive frames of same gesture to switch
+    private const int GESTURE_CHANGE_THRESHOLD = 3;
+    private string pendingGesture = "Unknown";
+    private int pendingGestureCount = 0;
+
+    // Confidence threshold - ignore low-confidence predictions
+    private const float MIN_CONFIDENCE_THRESHOLD = 0.4f;
 
     public AIServerInterface(ThalmicMyo myo)
     {
@@ -156,20 +164,36 @@ public class AIServerInterface
             Debug.Log("[AIServerInterface] Buffer filled, predictions active");
         }
 
-        // Use only the most recent predictions for gesture stability
-        // Take up to last 3 predictions from the batch to update memory
-        int predictionsToUse = Mathf.Min(3, predictedSamples.Count);
-        for (int i = predictedSamples.Count - predictionsToUse; i < predictedSamples.Count; i++)
+        // Only use the most recent prediction from the batch to avoid over-updating
+        PredictionItem latestPrediction = predictedSamples[predictedSamples.Count - 1];
+        
+        // Filter out low-confidence predictions - treat as Neutral instead of ignoring
+        if (latestPrediction.prob < MIN_CONFIDENCE_THRESHOLD)
         {
-            PredictionItem prediction = predictedSamples[i];
+            Debug.Log($"[AIServerInterface] Low confidence ({latestPrediction.prob:F2}) - treating as Neutral");
             
+            // Add Neutral prediction to memory
+            PredictionResponse neutralResponse = new PredictionResponse
+            {
+                label = "Neutral",
+                prob = 0.9f  // High confidence for rest state
+            };
+            
+            if (previousGesture.Count >= memorySize)
+            {
+                previousGesture.Dequeue();
+            }
+            previousGesture.Enqueue(neutralResponse);
+        }
+        else
+        {
+            // Normal confident prediction - add to memory
             PredictionResponse predResponse = new PredictionResponse
             {
-                label = prediction.label,
-                prob = prediction.prob
+                label = latestPrediction.label,
+                prob = latestPrediction.prob
             };
 
-            // Update memory queue
             if (previousGesture.Count >= memorySize)
             {
                 previousGesture.Dequeue();
@@ -177,24 +201,86 @@ public class AIServerInterface
             previousGesture.Enqueue(predResponse);
         }
 
-        // Majority voting: gesture must appear in >50% of last N predictions
+        // Confidence-weighted majority voting
         if (previousGesture.Count > 0)
         {
-            // Get most common gesture in memory
-            IGrouping<string, PredictionResponse> mostCommon = previousGesture
+            // Group by gesture and calculate weighted vote (count * average confidence)
+            var gestureGroups = previousGesture
                 .GroupBy(p => p.label)
-                .OrderByDescending(g => g.Count())
-                .First();
+                .Select(g => new {
+                    Gesture = g.Key,
+                    Count = g.Count(),
+                    AvgConfidence = g.Average(p => p.prob),
+                    WeightedVote = g.Count() * g.Average(p => p.prob)
+                })
+                .OrderByDescending(g => g.WeightedVote)
+                .ToList();
 
-            if (previousGesture.Count(p => p.label == mostCommon.Key) >= memorySize / 2)
+            string votedGesture = gestureGroups[0].Gesture;
+            float avgConfidence = gestureGroups[0].AvgConfidence;
+
+            // Require minimum representation in memory (at least 40% of memory size)
+            int minRepresentation = Mathf.CeilToInt(memorySize * 0.4f);
+            if (gestureGroups[0].Count < minRepresentation)
             {
-                currentGesture = mostCommon.Key;
-                currentGestureProb = mostCommon.Average(p => p.prob).ToString("F2");
+                // Not enough consistent predictions - return to Neutral
+                Debug.Log($"[AIServerInterface] Insufficient representation ({gestureGroups[0].Count}/{minRepresentation}) - returning to Neutral");
+                
+                // Use hysteresis for transitioning to Neutral too
+                if (pendingGesture == "Neutral")
+                {
+                    pendingGestureCount++;
+                    if (pendingGestureCount >= GESTURE_CHANGE_THRESHOLD)
+                    {
+                        currentGesture = "Neutral";
+                        currentGestureProb = "Uncertain";
+                        pendingGestureCount = 0;
+                        pendingGesture = "Unknown";
+                    }
+                }
+                else
+                {
+                    pendingGesture = "Neutral";
+                    pendingGestureCount = 1;
+                }
+                return;
+            }
+
+            // Apply gesture change hysteresis to prevent rapid switching
+            if (votedGesture != currentGesture)
+            {
+                if (votedGesture == pendingGesture)
+                {
+                    pendingGestureCount++;
+                    
+                    if (pendingGestureCount >= GESTURE_CHANGE_THRESHOLD)
+                    {
+                        // Confirmed gesture change
+                        Debug.Log($"[AIServerInterface] Gesture change: {currentGesture} -> {votedGesture} (conf: {avgConfidence:F2})");
+                        currentGesture = votedGesture;
+                        currentGestureProb = avgConfidence.ToString("F2");
+                        pendingGestureCount = 0;
+                        pendingGesture = "Unknown";
+                    }
+                    else
+                    {
+                        Debug.Log($"[AIServerInterface] Pending gesture change to {votedGesture} ({pendingGestureCount}/{GESTURE_CHANGE_THRESHOLD})");
+                    }
+                }
+                else
+                {
+                    // New pending gesture
+                    pendingGesture = votedGesture;
+                    pendingGestureCount = 1;
+                    Debug.Log($"[AIServerInterface] New pending gesture: {votedGesture} ({pendingGestureCount}/{GESTURE_CHANGE_THRESHOLD})");
+                }
             }
             else
             {
-                currentGesture = "Unknown";
-                currentGestureProb = "Uncertain";
+                // Same gesture, update confidence and reset pending
+                currentGestureProb = avgConfidence.ToString("F2");
+                pendingGestureCount = 0;
+                pendingGesture = "Unknown";
             }
         }
     }
@@ -224,6 +310,8 @@ public class AIServerInterface
                     previousGesture.Clear();
                     currentGesture = "Unknown";
                     currentGestureProb = "Uncertain";
+                    pendingGesture = "Unknown";
+                    pendingGestureCount = 0;
                 }
             }
         }
