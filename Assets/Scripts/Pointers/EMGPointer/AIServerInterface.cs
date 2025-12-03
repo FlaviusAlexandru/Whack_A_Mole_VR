@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class AIServerInterface
 {
     private ThalmicMyo thalmicMyo;
-    private int memorySize = 15;  // Increased from 6 to 15 for better smoothing
+    private int memorySize = 6;  // Reduced from 20 to allow faster gesture detection
     private string currentGesture = "Unknown";
     private string currentGestureProb = "Uncertain";
     private Queue<PredictionResponse> previousGesture = new Queue<PredictionResponse>();
@@ -20,12 +20,12 @@ public class AIServerInterface
     private bool isBuffering = true;
 
     // Gesture change hysteresis - require N consecutive frames of same gesture to switch
-    private const int GESTURE_CHANGE_THRESHOLD = 3;
+    private const int GESTURE_CHANGE_THRESHOLD = 3;  // Reduced from 5 to allow faster gesture detection
     private string pendingGesture = "Unknown";
     private int pendingGestureCount = 0;
 
     // Confidence threshold - ignore low-confidence predictions
-    private const float MIN_CONFIDENCE_THRESHOLD = 0.4f;
+    private const float MIN_CONFIDENCE_THRESHOLD = 0.5f;  // Higher bar
 
     public AIServerInterface(ThalmicMyo myo)
     {
