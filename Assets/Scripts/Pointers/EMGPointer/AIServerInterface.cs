@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class AIServerInterface
 {
     private ThalmicMyo thalmicMyo;
-    private int memorySize = 6;  // Reduced from 20 to allow faster gesture detection
+    private int memorySize = 12;  // Reduced from 20 to allow faster gesture detection
     private string currentGesture = "Unknown";
     private string currentGestureProb = "Uncertain";
     private Queue<PredictionResponse> previousGesture = new Queue<PredictionResponse>();
@@ -193,6 +193,13 @@ public class AIServerInterface
                 label = latestPrediction.label,
                 prob = latestPrediction.prob
             };
+            
+            // Treat "Unknown" same as "Neutral" for now - helps with stability
+            if (predResponse.label == "Unknown")
+            {
+                Debug.Log($"[AIServerInterface] Unknown gesture detected - treating as Neutral");
+                predResponse.label = "Neutral";
+            }
 
             if (previousGesture.Count >= memorySize)
             {
