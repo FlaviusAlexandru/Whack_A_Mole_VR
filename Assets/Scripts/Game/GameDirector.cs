@@ -121,12 +121,17 @@ public class GameDirector : MonoBehaviour
         }}
     };
 
-    void Awake()
+    private void Awake()
     {
         patternManager = FindObjectOfType<PatternManager>();
         modifiersManager = FindObjectOfType<ModifiersManager>();
         gameDefaultDuration = gameDuration;
         initGamePeriod();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+Invoke(nameof(StartGame), 2f);
+#endif
+
     }
 
     public static void initGamePeriod()
